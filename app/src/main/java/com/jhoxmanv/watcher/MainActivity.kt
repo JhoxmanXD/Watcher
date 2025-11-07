@@ -63,6 +63,7 @@ class MainActivity : ComponentActivity() {
                 ) {
                     val navController = rememberNavController()
                     val startDestination = if (tutorialShown) "main" else "tutorial"
+                    val permissionState by mainViewModel.permissionState
 
                     NavHost(navController = navController, startDestination = startDestination) {
                         composable("tutorial") {
@@ -72,14 +73,14 @@ class MainActivity : ComponentActivity() {
                             })
                         }
                         composable("main") {
-                            val allPermissionsGranted by mainViewModel.allPermissionsGranted
-                            if (allPermissionsGranted) {
+                            if (permissionState.allGranted()) {
                                 MainScreen(
                                     onShowTutorial = { navController.navigate("tutorial") },
                                     onShowSettings = { navController.navigate("settings") }
                                 )
                             } else {
                                 PermissionsList(
+                                    permissionState = permissionState,
                                     onGrantCameraPermission = { requestPermissionLauncher.launch(Manifest.permission.CAMERA) },
                                     onGrantOverlayPermission = { requestOverlayLauncher.launch(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, "package:$packageName".toUri())) },
                                     onGrantDeviceAdminPermission = {
@@ -110,6 +111,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        // Whenever the app comes to the foreground, check permissions
         mainViewModel.checkPermissions(this)
     }
 
