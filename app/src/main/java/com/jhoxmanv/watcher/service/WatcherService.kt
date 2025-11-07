@@ -22,6 +22,7 @@ import androidx.lifecycle.LifecycleRegistry
 import com.jhoxmanv.watcher.EyeWatchController
 import com.jhoxmanv.watcher.MainActivity
 import com.jhoxmanv.watcher.R
+import com.jhoxmanv.watcher.WatcherStateHolder
 
 class WatcherService : Service(), LifecycleOwner {
 
@@ -42,6 +43,7 @@ class WatcherService : Service(), LifecycleOwner {
     override fun onCreate() {
         super.onCreate()
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_CREATE)
+        WatcherStateHolder.isServiceRunning.value = true // Set state to running
 
         devicePolicyManager = getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
         componentName = ComponentName(this, DeviceAdmin::class.java)
@@ -106,6 +108,7 @@ class WatcherService : Service(), LifecycleOwner {
     override fun onDestroy() {
         super.onDestroy()
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY)
+        WatcherStateHolder.isServiceRunning.value = false // Set state to stopped
         cancelScreenLock()
         eyeWatchController.stopCamera()
         Log.d(TAG, "Service destroyed.")

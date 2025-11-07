@@ -25,16 +25,15 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.jhoxmanv.watcher.WatcherStateHolder
 import com.jhoxmanv.watcher.service.WatcherService
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -44,8 +43,8 @@ fun MainScreen(
     onShowSettings: () -> Unit
 ) {
     val context = LocalContext.current
-    // Use rememberSaveable to keep the state across configuration changes (like rotation)
-    var isServiceRunning by rememberSaveable { mutableStateOf(false) }
+    // Observe the service running state from the global state holder
+    val isServiceRunning by WatcherStateHolder.isServiceRunning.collectAsState()
 
     Scaffold(
         topBar = {
@@ -90,7 +89,7 @@ fun MainScreen(
                     } else {
                         context.startService(intent)
                     }
-                    isServiceRunning = !isServiceRunning
+                    // No need to manually toggle the state here anymore
                 },
                 modifier = Modifier
                     .fillMaxWidth(0.8f)
