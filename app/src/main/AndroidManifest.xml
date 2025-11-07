@@ -23,6 +23,7 @@
         <activity
             android:name="com.jhoxmanv.watcher.MainActivity"
             android:exported="true"
+            android:screenOrientation="portrait" 
             android:theme="@style/Theme.Watcher">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

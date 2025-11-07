@@ -1,7 +1,6 @@
 package com.jhoxmanv.watcher.ui.screens
 
 import android.content.Intent
-import android.content.res.Configuration
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.*
@@ -17,7 +16,6 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.onSizeChanged
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
@@ -47,20 +45,16 @@ fun GazeConfigScreen(navController: NavController) {
     var largestFace by remember { mutableStateOf<Face?>(null) }
     var sourceSize by remember { mutableStateOf(IntSize.Zero) }
     var previewSize by remember { mutableStateOf(IntSize.Zero) }
-    val isPortrait = LocalConfiguration.current.orientation == Configuration.ORIENTATION_PORTRAIT
 
-    // The UI slider works with sensitivity (0.0 to 1.0), which is the inverse of the threshold.
     var sliderSensitivity by remember { mutableFloatStateOf(1.0f - settingsViewModel.tempGazeThreshold.floatValue) }
 
-    // This effect correctly starts/restarts the camera when the slider value changes.
     LaunchedEffect(Unit) {
         eyeWatchController.setOnFacesDetectedListener { result ->
             largestFace = result.faces.maxByOrNull { it.boundingBox.width() * it.boundingBox.height() }
             sourceSize = IntSize(result.sourceWidth, result.sourceHeight)
         }
-        // Start with a fixed face size of 50%
         eyeWatchController.startCamera(
-            minFaceSize = 0.5f,
+            minFaceSize = 0.5f, // Fixed value as requested
             surfaceProvider = previewView.surfaceProvider
         )
     }
@@ -89,21 +83,21 @@ fun GazeConfigScreen(navController: NavController) {
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
+            // Camera preview takes up all available space
             Box(
                 modifier = Modifier
-                    .weight(0.7f) // Give more space to the camera
+                    .fillMaxWidth()
+                    .weight(1f)
                     .onSizeChanged { previewSize = it }
             ) {
                 AndroidView({ previewView }, modifier = Modifier.fillMaxSize())
-
                 Canvas(modifier = Modifier.fillMaxSize()) { ->
                     largestFace?.let { face ->
                         if (previewSize == IntSize.Zero || sourceSize == IntSize.Zero) return@let
 
                         val (scaleX, scaleY) = calculateScaleFactors(
                             sourceWidth = sourceSize.width, sourceHeight = sourceSize.height,
-                            previewWidth = previewSize.width, previewHeight = previewSize.height,
-                            isPortrait = isPortrait
+                            previewWidth = previewSize.width, previewHeight = previewSize.height
                         )
 
                         val bounds = face.boundingBox
@@ -117,7 +111,6 @@ fun GazeConfigScreen(navController: NavController) {
                             style = Stroke(width = 2.dp.toPx())
                         )
 
-                        // Use the temporary threshold for real-time feedback
                         val isLooking = (face.leftEyeOpenProbability ?: 0f) > settingsViewModel.tempGazeThreshold.floatValue &&
                                       (face.rightEyeOpenProbability ?: 0f) > settingsViewModel.tempGazeThreshold.floatValue
 
@@ -133,12 +126,13 @@ fun GazeConfigScreen(navController: NavController) {
                 }
             }
 
-            // Controls section
+            // Controls section takes only the space it needs
             Column(
                 modifier = Modifier
-                    .weight(0.3f) // Less space for controls
+                    .fillMaxWidth()
+                    .wrapContentHeight()
                     .padding(16.dp),
-                verticalArrangement = Arrangement.Center
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 SettingItem(
                     icon = Icons.Default.Visibility,
@@ -157,7 +151,7 @@ fun GazeConfigScreen(navController: NavController) {
                     )
                 }
 
-                Spacer(Modifier.weight(1f))
+                Spacer(Modifier.height(8.dp)) // Add some space before the button
 
                 Button(
                     onClick = {
@@ -180,10 +174,11 @@ fun GazeConfigScreen(navController: NavController) {
 
 private fun calculateScaleFactors(
     sourceWidth: Int, sourceHeight: Int,
-    previewWidth: Int, previewHeight: Int,
-    isPortrait: Boolean
+    previewWidth: Int, previewHeight: Int
 ): Pair<Float, Float> {
-    val (width, height) = if (isPortrait) sourceHeight to sourceWidth else sourceWidth to sourceHeight
+    // Since the app is locked to portrait, the camera source will be landscape.
+    val width = sourceHeight
+    val height = sourceWidth
     val scaleX = previewWidth.toFloat() / width.toFloat()
     val scaleY = previewHeight.toFloat() / height.toFloat()
     return scaleX to scaleY
