@@ -1,6 +1,13 @@
 package com.jhoxmanv.watcher.ui.components
 
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -15,11 +22,13 @@ fun SettingItem(
     icon: ImageVector,
     title: String,
     description: String,
+    modifier: Modifier = Modifier, // Accept a modifier
     valueLabel: @Composable (() -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit
 ) {
     Column(
-        modifier = Modifier
+        // Apply the modifier to the root element of the composable
+        modifier = modifier
             .fillMaxWidth()
             .padding(vertical = 16.dp)
     ) {

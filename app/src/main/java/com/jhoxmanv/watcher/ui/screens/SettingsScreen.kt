@@ -1,13 +1,14 @@
 package com.jhoxmanv.watcher.ui.screens
 
+import android.content.Intent
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Face
 import androidx.compose.material.icons.filled.Timer
-import androidx.compose.material3.Divider
+import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
@@ -15,16 +16,30 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.jhoxmanv.watcher.WatcherStateHolder
+import com.jhoxmanv.watcher.service.WatcherService
 import com.jhoxmanv.watcher.ui.components.InfoTooltip
 import com.jhoxmanv.watcher.ui.components.SettingItem
 import com.jhoxmanv.watcher.viewmodel.SettingsViewModel
 
 @Composable
-fun SettingsScreen(settingsViewModel: SettingsViewModel) {
-    val faceDetectionThreshold by settingsViewModel.faceDetectionThreshold
+fun SettingsScreen(
+    settingsViewModel: SettingsViewModel,
+    onNavigateToGazeConfig: () -> Unit
+) {
+    val context = LocalContext.current
     val screenOffTime by settingsViewModel.screenOffTime
+
+    fun onSettingsChanged() {
+        if (WatcherStateHolder.isServiceRunning.value) {
+            val intent = Intent(context, WatcherService::class.java)
+            context.stopService(intent)
+            context.startService(intent)
+        }
+    }
 
     Column(modifier = Modifier.padding(16.dp)) {
         Text(
@@ -33,28 +48,17 @@ fun SettingsScreen(settingsViewModel: SettingsViewModel) {
             modifier = Modifier.padding(bottom = 16.dp)
         )
 
+        // Clickable item to navigate to the new Gaze Configuration screen
         SettingItem(
-            icon = Icons.Default.Face,
-            title = "Face Detection Threshold",
-            description = "Controls the sensitivity of the face detection.",
-            valueLabel = {
-                Text("${(faceDetectionThreshold * 100).toInt()}%", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-            }
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Slider(
-                    value = faceDetectionThreshold,
-                    onValueChange = { settingsViewModel.onFaceThresholdChanged(it) },
-                    valueRange = 0.1f..0.9f,
-                    steps = 8,
-                    modifier = Modifier.weight(1f)
-                )
-                InfoTooltip("A lower value makes the detection more sensitive, but may increase false positives.")
-            }
-        }
+            icon = Icons.Default.Tune,
+            title = "Configure Gaze Detection",
+            description = "Adjust sensitivity and see a live preview.",
+            modifier = Modifier.clickable(onClick = onNavigateToGazeConfig)
+        ) { /* No content here, the whole item is clickable */ }
 
-        Divider(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
+        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
 
+        // Setting for Screen Off Time
         SettingItem(
             icon = Icons.Default.Timer,
             title = "Screen Off Time",
@@ -67,6 +71,7 @@ fun SettingsScreen(settingsViewModel: SettingsViewModel) {
                 Slider(
                     value = screenOffTime,
                     onValueChange = { settingsViewModel.onScreenOffTimeChanged(it) },
+                    onValueChangeFinished = { onSettingsChanged() },
                     valueRange = 1f..60f,
                     steps = 59,
                     modifier = Modifier.weight(1f)

@@ -5,47 +5,56 @@ import android.content.Context
 import android.util.Log
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
+import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleOwner
+import com.google.common.util.concurrent.ListenableFuture
 import com.google.mlkit.vision.common.InputImage
+import com.google.mlkit.vision.face.Face
 import com.google.mlkit.vision.face.FaceDetection
 import com.google.mlkit.vision.face.FaceDetectorOptions
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
+// Data class to hold the complete result of a face detection pass
+data class FaceDetectionResult(
+    val faces: List<Face>,
+    val sourceWidth: Int,
+    val sourceHeight: Int
+)
+
 class EyeWatchController(private val context: Context, private val lifecycleOwner: LifecycleOwner) {
 
     private var cameraExecutor: ExecutorService = Executors.newSingleThreadExecutor()
-    private var imageAnalyzer: ImageAnalysis? = null
-    private var cameraProvider: ProcessCameraProvider? = null
-    private var onFaceDetected: (Boolean) -> Unit = {}
+    private lateinit var cameraProviderFuture: ListenableFuture<ProcessCameraProvider>
+    private var onFacesDetected: (FaceDetectionResult) -> Unit = {}
 
     companion object {
         private const val TAG = "EyeWatchController"
     }
 
-    fun setOnFaceDetectedListener(listener: (Boolean) -> Unit) {
-        onFaceDetected = listener
+    fun setOnFacesDetectedListener(listener: (FaceDetectionResult) -> Unit) {
+        onFacesDetected = listener
     }
 
     @SuppressLint("UnsafeOptInUsageError")
-    fun startCamera(minFaceSize: Float) { // Parameter for sensitivity
-        val cameraProviderFuture = ProcessCameraProvider.getInstance(context)
+    fun startCamera(minFaceSize: Float, surfaceProvider: Preview.SurfaceProvider? = null) {
+        cameraProviderFuture = ProcessCameraProvider.getInstance(context)
 
         cameraProviderFuture.addListener({
-            cameraProvider = cameraProviderFuture.get()
+            val cameraProvider = cameraProviderFuture.get()
 
-            // Configure the face detector with the provided sensitivity
             val faceDetectorOptions = FaceDetectorOptions.Builder()
                 .setPerformanceMode(FaceDetectorOptions.PERFORMANCE_MODE_FAST)
-                .setClassificationMode(FaceDetectorOptions.CLASSIFICATION_MODE_NONE) // We only need detection
-                .setMinFaceSize(minFaceSize) // Use the parameter here
+                .setLandmarkMode(FaceDetectorOptions.LANDMARK_MODE_ALL)
+                .setClassificationMode(FaceDetectorOptions.CLASSIFICATION_MODE_ALL)
+                .setMinFaceSize(minFaceSize)
                 .build()
 
             val faceDetector = FaceDetection.getClient(faceDetectorOptions)
 
-            imageAnalyzer = ImageAnalysis.Builder()
+            val imageAnalyzer = ImageAnalysis.Builder()
                 .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                 .build()
                 .also { analysis ->
@@ -55,7 +64,8 @@ class EyeWatchController(private val context: Context, private val lifecycleOwne
                             val inputImage = InputImage.fromMediaImage(image, imageProxy.imageInfo.rotationDegrees)
                             faceDetector.process(inputImage)
                                 .addOnSuccessListener { faces ->
-                                    onFaceDetected(faces.isNotEmpty())
+                                    val result = FaceDetectionResult(faces, image.width, image.height)
+                                    onFacesDetected(result)
                                 }
                                 .addOnFailureListener { e ->
                                     Log.e(TAG, "Face detection failed", e)
@@ -72,13 +82,22 @@ class EyeWatchController(private val context: Context, private val lifecycleOwne
             val cameraSelector = CameraSelector.DEFAULT_FRONT_CAMERA
 
             try {
-                cameraProvider?.unbindAll()
-                cameraProvider?.bindToLifecycle(
+                cameraProvider.unbindAll()
+                val useCases = mutableListOf<androidx.camera.core.UseCase>(imageAnalyzer)
+
+                if (surfaceProvider != null) {
+                    val preview = Preview.Builder().build().also {
+                        it.setSurfaceProvider(surfaceProvider)
+                    }
+                    useCases.add(preview)
+                }
+
+                cameraProvider.bindToLifecycle(
                     lifecycleOwner,
                     cameraSelector,
-                    imageAnalyzer
+                    *useCases.toTypedArray()
                 )
-                Log.d(TAG, "Camera started and bound to lifecycle.")
+                Log.d(TAG, "Camera started. Preview enabled: ${surfaceProvider != null}")
 
             } catch (e: Exception) {
                 Log.e(TAG, "Use case binding failed", e)
@@ -87,11 +106,10 @@ class EyeWatchController(private val context: Context, private val lifecycleOwne
     }
 
     fun stopCamera() {
-        if (cameraExecutor.isShutdown) return
-        try {
-            cameraProvider?.unbindAll()
-            Log.d(TAG, "Camera stopped and unbound.")
-        } finally {
+        if (::cameraProviderFuture.isInitialized) {
+            cameraProviderFuture.get().unbindAll()
+        }
+        if (!cameraExecutor.isShutdown) {
             cameraExecutor.shutdown()
         }
     }

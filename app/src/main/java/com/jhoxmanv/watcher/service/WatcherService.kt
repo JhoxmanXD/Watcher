@@ -17,6 +17,7 @@ import androidx.core.app.NotificationCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
+import com.google.mlkit.vision.face.Face
 import com.jhoxmanv.watcher.EyeWatchController
 import com.jhoxmanv.watcher.MainActivity
 import com.jhoxmanv.watcher.OverlayController
@@ -58,21 +59,60 @@ class WatcherService : Service(), LifecycleOwner {
         createNotificationChannel()
         startForeground(1, createNotification())
 
+        // Load all settings
         val screenOffTime = sharedPreferences.getFloat("screen_off_time", 10f).toLong() * 1000
-        val faceThreshold = sharedPreferences.getFloat("face_threshold", 0.4f)
+        val minFaceSize = sharedPreferences.getFloat("min_face_size", 0.4f)
+        val eyeOpenProb = sharedPreferences.getFloat("eye_open_prob", 0.6f)
 
-        eyeWatchController.setOnFaceDetectedListener { hasFace ->
-            if (hasFace) {
+        // Configure and start camera for background analysis (no preview)
+        eyeWatchController.setOnFacesDetectedListener { result ->
+            val faces = result.faces
+            val isSomeoneLooking = isUserLooking(faces, eyeOpenProb)
+            if (isSomeoneLooking) {
                 overlayController.hideOverlay()
                 cancelScreenLock()
             } else {
                 scheduleScreenLock(screenOffTime)
             }
         }
-        eyeWatchController.startCamera(faceThreshold)
+        eyeWatchController.startCamera(minFaceSize = minFaceSize)
 
         return START_STICKY
     }
+
+    // ===================================================================
+    // INICIO DE LA MODIFICACIÓN
+    // ===================================================================
+    private fun isUserLooking(faces: List<Face>, eyeOpenThreshold: Float): Boolean {
+        // Si no hay rostros, definitivamente no está mirando.
+        if (faces.isEmpty()) {
+            return false
+        }
+
+        // Encuentra el rostro más grande basándose en el área de su cuadro delimitador (bounding box).
+        // `maxByOrNull` es una forma segura y concisa de encontrar el máximo en una colección.
+        val largestFace = faces.maxByOrNull {
+            val bounds = it.boundingBox
+            bounds.width() * bounds.height()
+        }
+
+        // Si por alguna razón no se pudo determinar el rostro más grande (aunque no debería pasar si la lista no está vacía),
+        // consideramos que no está mirando.
+        if (largestFace == null) {
+            return false
+        }
+
+        // Ahora, aplica la lógica de los ojos abiertos SOLO al rostro más grande.
+        val leftEyeOpenProb = largestFace.leftEyeOpenProbability
+        val rightEyeOpenProb = largestFace.rightEyeOpenProbability
+
+        // Devuelve `true` solo si ambos ojos del rostro más grande están abiertos por encima del umbral.
+        return (leftEyeOpenProb != null && leftEyeOpenProb > eyeOpenThreshold) &&
+                (rightEyeOpenProb != null && rightEyeOpenProb > eyeOpenThreshold)
+    }
+    // ===================================================================
+    // FIN DE LA MODIFICACIÓN
+    // ===================================================================
 
     private fun scheduleScreenLock(delay: Long) {
         if (lockRunnable == null && !overlayController.isOverlayShowing()) {

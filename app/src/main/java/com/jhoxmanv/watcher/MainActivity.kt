@@ -23,6 +23,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.jhoxmanv.watcher.service.WatcherService
 import com.jhoxmanv.watcher.ui.components.PermissionsList
+import com.jhoxmanv.watcher.ui.screens.GazeConfigScreen
 import com.jhoxmanv.watcher.ui.screens.MainScreen
 import com.jhoxmanv.watcher.ui.screens.SettingsScreen
 import com.jhoxmanv.watcher.ui.screens.TutorialScreen
@@ -86,7 +87,13 @@ class MainActivity : ComponentActivity() {
                         }
                         composable("settings") {
                             val settingsViewModel: SettingsViewModel = viewModel()
-                            SettingsScreen(settingsViewModel = settingsViewModel)
+                            SettingsScreen(
+                                settingsViewModel = settingsViewModel,
+                                onNavigateToGazeConfig = { navController.navigate("gaze_config") }
+                            )
+                        }
+                        composable("gaze_config") {
+                            GazeConfigScreen(navController = navController) // Pass NavController here
                         }
                     }
                 }
