@@ -5,6 +5,7 @@ import android.app.admin.DevicePolicyManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.pm.PackageManager
+import android.os.Build
 import android.provider.Settings
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -22,17 +23,22 @@ import com.jhoxmanv.watcher.service.DeviceAdmin
 fun PermissionsList(
     onGrantCameraPermission: () -> Unit,
     onGrantOverlayPermission: () -> Unit,
-    onGrantDeviceAdminPermission: () -> Unit
+    onGrantDeviceAdminPermission: () -> Unit,
+    onGrantNotificationPermission: () -> Unit
 ) {
     val context = LocalContext.current
     val devicePolicyManager = context.getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
     val componentName = ComponentName(context, DeviceAdmin::class.java)
 
-    val permissions = listOf(
+    val permissions = mutableListOf(
         "Camera" to Manifest.permission.CAMERA,
         "Draw Overlays" to Manifest.permission.SYSTEM_ALERT_WINDOW,
         "Device Admin" to "Device Admin"
-    )
+    ).apply {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            add("Notifications" to Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
 
     Column(modifier = Modifier.padding(16.dp)) {
         Text(text = "Permissions needed:", modifier = Modifier.padding(bottom = 8.dp))
@@ -52,6 +58,7 @@ fun PermissionsList(
                             Manifest.permission.CAMERA -> onGrantCameraPermission()
                             Manifest.permission.SYSTEM_ALERT_WINDOW -> onGrantOverlayPermission()
                             "Device Admin" -> onGrantDeviceAdminPermission()
+                            Manifest.permission.POST_NOTIFICATIONS -> onGrantNotificationPermission()
                         }
                     }) {
                         Text("Grant")

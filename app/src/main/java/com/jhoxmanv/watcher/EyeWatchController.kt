@@ -2,6 +2,7 @@ package com.jhoxmanv.watcher
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.util.Log
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.lifecycle.ProcessCameraProvider
@@ -20,7 +21,6 @@ class EyeWatchController(private val context: Context, private val lifecycleOwne
     private var cameraProvider: ProcessCameraProvider? = null
     private var onFaceDetected: (Boolean) -> Unit = {}
 
-    // Define un TAG constante para los logs de esta clase
     companion object {
         private const val TAG = "EyeWatchController"
     }
@@ -30,15 +30,17 @@ class EyeWatchController(private val context: Context, private val lifecycleOwne
     }
 
     @SuppressLint("UnsafeOptInUsageError")
-    fun startCamera() {
+    fun startCamera(minFaceSize: Float) { // Parameter for sensitivity
         val cameraProviderFuture = ProcessCameraProvider.getInstance(context)
 
         cameraProviderFuture.addListener({
             cameraProvider = cameraProviderFuture.get()
 
+            // Configure the face detector with the provided sensitivity
             val faceDetectorOptions = FaceDetectorOptions.Builder()
                 .setPerformanceMode(FaceDetectorOptions.PERFORMANCE_MODE_FAST)
-                .setClassificationMode(FaceDetectorOptions.CLASSIFICATION_MODE_ALL)
+                .setClassificationMode(FaceDetectorOptions.CLASSIFICATION_MODE_NONE) // We only need detection
+                .setMinFaceSize(minFaceSize) // Use the parameter here
                 .build()
 
             val faceDetector = FaceDetection.getClient(faceDetectorOptions)
@@ -53,19 +55,15 @@ class EyeWatchController(private val context: Context, private val lifecycleOwne
                             val inputImage = InputImage.fromMediaImage(image, imageProxy.imageInfo.rotationDegrees)
                             faceDetector.process(inputImage)
                                 .addOnSuccessListener { faces ->
-                                    // Notifica si se detectó al menos un rostro
                                     onFaceDetected(faces.isNotEmpty())
                                 }
                                 .addOnFailureListener { e ->
-                                    // Usa AppLogger para registrar el error
-                                    AppLogger.e(TAG, "La detección de rostros falló", e)
+                                    Log.e(TAG, "Face detection failed", e)
                                 }
-                                .addOnCompleteListener {
-                                    // ¡Muy importante! Cierra el proxy para recibir el siguiente frame
+                                .addOnCompleteListener { _ ->
                                     imageProxy.close()
                                 }
                         } else {
-                            // Cierra el proxy si la imagen es nula para evitar bloqueos
                             imageProxy.close()
                         }
                     }
@@ -80,12 +78,10 @@ class EyeWatchController(private val context: Context, private val lifecycleOwne
                     cameraSelector,
                     imageAnalyzer
                 )
-                // Usa AppLogger para un log de depuración
-                AppLogger.d(TAG, "Cámara iniciada y enlazada al ciclo de vida.")
+                Log.d(TAG, "Camera started and bound to lifecycle.")
 
             } catch (e: Exception) {
-                // Usa AppLogger para registrar el error
-                AppLogger.e(TAG, "Error al enlazar los casos de uso de la cámara", e)
+                Log.e(TAG, "Use case binding failed", e)
             }
         }, ContextCompat.getMainExecutor(context))
     }
@@ -94,7 +90,7 @@ class EyeWatchController(private val context: Context, private val lifecycleOwne
         if (cameraExecutor.isShutdown) return
         try {
             cameraProvider?.unbindAll()
-            AppLogger.d(TAG, "Cámara detenida y desenlazada.")
+            Log.d(TAG, "Camera stopped and unbound.")
         } finally {
             cameraExecutor.shutdown()
         }
