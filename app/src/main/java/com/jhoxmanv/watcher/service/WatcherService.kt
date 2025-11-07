@@ -23,6 +23,7 @@ import com.jhoxmanv.watcher.MainActivity
 import com.jhoxmanv.watcher.OverlayController
 import com.jhoxmanv.watcher.R
 import com.jhoxmanv.watcher.WatcherStateHolder
+import kotlin.math.abs
 
 class WatcherService : Service(), LifecycleOwner {
 
@@ -59,16 +60,24 @@ class WatcherService : Service(), LifecycleOwner {
         createNotificationChannel()
         startForeground(1, createNotification())
 
-        // Load all settings
+        // Load all precise settings
         val screenOffTime = sharedPreferences.getFloat("screen_off_time", 10f).toLong() * 1000
-        val minFaceSize = sharedPreferences.getFloat("min_face_size", 0.4f)
-        val eyeOpenProb = sharedPreferences.getFloat("eye_open_prob", 0.6f)
+        val gazeThreshold = sharedPreferences.getFloat("gaze_threshold", 0.4f)
+        val yawThreshold = sharedPreferences.getFloat("yaw_threshold", 20f)
+        val pitchThreshold = sharedPreferences.getFloat("pitch_threshold", 20f)
+        val minFaceSize = 0.5f // Use the fixed value
 
-        // Configure and start camera for background analysis (no preview)
+        // Configure and start camera for background analysis
         eyeWatchController.setOnFacesDetectedListener { result ->
-            val faces = result.faces
-            val isSomeoneLooking = isUserLooking(faces, eyeOpenProb)
-            if (isSomeoneLooking) {
+            // Focus only on the largest face, same as the config screen
+            val largestFace = result.faces.maxByOrNull { it.boundingBox.width() * it.boundingBox.height() }
+            val isLooking = if (largestFace != null) {
+                isUserLooking(largestFace, gazeThreshold, yawThreshold, pitchThreshold)
+            } else {
+                false
+            }
+
+            if (isLooking) {
                 overlayController.hideOverlay()
                 cancelScreenLock()
             } else {
@@ -80,39 +89,15 @@ class WatcherService : Service(), LifecycleOwner {
         return START_STICKY
     }
 
-    // ===================================================================
-    // INICIO DE LA MODIFICACIÓN
-    // ===================================================================
-    private fun isUserLooking(faces: List<Face>, eyeOpenThreshold: Float): Boolean {
-        // Si no hay rostros, definitivamente no está mirando.
-        if (faces.isEmpty()) {
-            return false
-        }
+    private fun isUserLooking(face: Face, eyeOpenThreshold: Float, yawThreshold: Float, pitchThreshold: Float): Boolean {
+        val eyesAreOpen = (face.leftEyeOpenProbability ?: 0f) > eyeOpenThreshold &&
+                          (face.rightEyeOpenProbability ?: 0f) > eyeOpenThreshold
 
-        // Encuentra el rostro más grande basándose en el área de su cuadro delimitador (bounding box).
-        // `maxByOrNull` es una forma segura y concisa de encontrar el máximo en una colección.
-        val largestFace = faces.maxByOrNull {
-            val bounds = it.boundingBox
-            bounds.width() * bounds.height()
-        }
+        val headIsFacingForward = abs(face.headEulerAngleY) < yawThreshold &&
+                                  abs(face.headEulerAngleX) < pitchThreshold
 
-        // Si por alguna razón no se pudo determinar el rostro más grande (aunque no debería pasar si la lista no está vacía),
-        // consideramos que no está mirando.
-        if (largestFace == null) {
-            return false
-        }
-
-        // Ahora, aplica la lógica de los ojos abiertos SOLO al rostro más grande.
-        val leftEyeOpenProb = largestFace.leftEyeOpenProbability
-        val rightEyeOpenProb = largestFace.rightEyeOpenProbability
-
-        // Devuelve `true` solo si ambos ojos del rostro más grande están abiertos por encima del umbral.
-        return (leftEyeOpenProb != null && leftEyeOpenProb > eyeOpenThreshold) &&
-                (rightEyeOpenProb != null && rightEyeOpenProb > eyeOpenThreshold)
+        return eyesAreOpen && headIsFacingForward
     }
-    // ===================================================================
-    // FIN DE LA MODIFICACIÓN
-    // ===================================================================
 
     private fun scheduleScreenLock(delay: Long) {
         if (lockRunnable == null && !overlayController.isOverlayShowing()) {
