@@ -5,8 +5,6 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
-import android.app.admin.DevicePolicyManager
-import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
@@ -21,6 +19,7 @@ import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
 import com.jhoxmanv.watcher.EyeWatchController
 import com.jhoxmanv.watcher.MainActivity
+import com.jhoxmanv.watcher.OverlayController
 import com.jhoxmanv.watcher.R
 import com.jhoxmanv.watcher.WatcherStateHolder
 
@@ -28,9 +27,8 @@ class WatcherService : Service(), LifecycleOwner {
 
     private val CHANNEL_ID = "WatcherServiceChannel"
     private lateinit var eyeWatchController: EyeWatchController
+    private lateinit var overlayController: OverlayController
     private val lifecycleRegistry = LifecycleRegistry(this)
-    private lateinit var devicePolicyManager: DevicePolicyManager
-    private lateinit var componentName: ComponentName
     private lateinit var sharedPreferences: SharedPreferences
 
     private val lockHandler = Handler(Looper.getMainLooper())
@@ -43,13 +41,11 @@ class WatcherService : Service(), LifecycleOwner {
     override fun onCreate() {
         super.onCreate()
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_CREATE)
-        WatcherStateHolder.isServiceRunning.value = true // Set state to running
+        WatcherStateHolder.isServiceRunning.value = true
 
-        devicePolicyManager = getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
-        componentName = ComponentName(this, DeviceAdmin::class.java)
         sharedPreferences = getSharedPreferences("watcher_settings", Context.MODE_PRIVATE)
-
         eyeWatchController = EyeWatchController(this, this)
+        overlayController = OverlayController(this)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -62,17 +58,14 @@ class WatcherService : Service(), LifecycleOwner {
         createNotificationChannel()
         startForeground(1, createNotification())
 
-        // Load settings
-        val screenOffTime = sharedPreferences.getFloat("screen_off_time", 10f).toLong() * 1000 // Convert to millis
+        val screenOffTime = sharedPreferences.getFloat("screen_off_time", 10f).toLong() * 1000
         val faceThreshold = sharedPreferences.getFloat("face_threshold", 0.4f)
 
-        // Configure and start camera
         eyeWatchController.setOnFaceDetectedListener { hasFace ->
             if (hasFace) {
-                // If a face is detected, cancel any pending screen lock
+                overlayController.hideOverlay()
                 cancelScreenLock()
             } else {
-                // If no face is detected, schedule a screen lock
                 scheduleScreenLock(screenOffTime)
             }
         }
@@ -82,16 +75,11 @@ class WatcherService : Service(), LifecycleOwner {
     }
 
     private fun scheduleScreenLock(delay: Long) {
-        // If a lock is not already scheduled, create and post a new one
-        if (lockRunnable == null) {
+        if (lockRunnable == null && !overlayController.isOverlayShowing()) {
             Log.d(TAG, "Scheduling screen lock in ${delay / 1000} seconds.")
             lockRunnable = Runnable {
-                val isAdmin = devicePolicyManager.isAdminActive(componentName)
-                if (isAdmin) {
-                    Log.d(TAG, "Locking screen now.")
-                    devicePolicyManager.lockNow()
-                }
-                lockRunnable = null // Reset after execution
+                overlayController.showOverlay()
+                lockRunnable = null
             }
             lockHandler.postDelayed(lockRunnable!!, delay)
         }
@@ -108,8 +96,9 @@ class WatcherService : Service(), LifecycleOwner {
     override fun onDestroy() {
         super.onDestroy()
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY)
-        WatcherStateHolder.isServiceRunning.value = false // Set state to stopped
+        WatcherStateHolder.isServiceRunning.value = false
         cancelScreenLock()
+        overlayController.hideOverlay()
         eyeWatchController.stopCamera()
         Log.d(TAG, "Service destroyed.")
     }
@@ -118,16 +107,10 @@ class WatcherService : Service(), LifecycleOwner {
 
     private fun createNotification(): Notification {
         val notificationIntent = Intent(this, MainActivity::class.java)
-        val pendingIntent = PendingIntent.getActivity(
-            this, 0, notificationIntent, PendingIntent.FLAG_IMMUTABLE
-        )
+        val pendingIntent = PendingIntent.getActivity(this, 0, notificationIntent, PendingIntent.FLAG_IMMUTABLE)
 
-        val stopIntent = Intent(this, WatcherService::class.java).apply {
-            action = "STOP_SERVICE"
-        }
-        val stopPendingIntent = PendingIntent.getService(
-            this, 0, stopIntent, PendingIntent.FLAG_IMMUTABLE
-        )
+        val stopIntent = Intent(this, WatcherService::class.java).apply { action = "STOP_SERVICE" }
+        val stopPendingIntent = PendingIntent.getService(this, 0, stopIntent, PendingIntent.FLAG_IMMUTABLE)
 
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("Watcher is Active")
@@ -141,11 +124,7 @@ class WatcherService : Service(), LifecycleOwner {
 
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val serviceChannel = NotificationChannel(
-                CHANNEL_ID,
-                "Watcher Service Channel",
-                NotificationManager.IMPORTANCE_DEFAULT
-            )
+            val serviceChannel = NotificationChannel(CHANNEL_ID, "Watcher Service Channel", NotificationManager.IMPORTANCE_DEFAULT)
             getSystemService(NotificationManager::class.java).createNotificationChannel(serviceChannel)
         }
     }

@@ -16,7 +16,6 @@ fun PermissionsList(
     permissionState: PermissionState,
     onGrantCameraPermission: () -> Unit,
     onGrantOverlayPermission: () -> Unit,
-    onGrantDeviceAdminPermission: () -> Unit,
     onGrantNotificationPermission: () -> Unit
 ) {
     Column(modifier = Modifier.padding(16.dp)) {
@@ -31,11 +30,6 @@ fun PermissionsList(
             name = "Draw Overlays",
             isGranted = permissionState.hasOverlay,
             onClick = onGrantOverlayPermission
-        )
-        PermissionRow(
-            name = "Device Admin",
-            isGranted = permissionState.hasDeviceAdmin,
-            onClick = onGrantDeviceAdminPermission
         )
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             PermissionRow(

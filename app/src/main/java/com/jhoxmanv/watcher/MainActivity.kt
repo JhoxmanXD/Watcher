@@ -1,8 +1,6 @@
 package com.jhoxmanv.watcher
 
 import android.Manifest
-import android.app.admin.DevicePolicyManager
-import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.os.Build
@@ -23,7 +21,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.jhoxmanv.watcher.service.DeviceAdmin
 import com.jhoxmanv.watcher.service.WatcherService
 import com.jhoxmanv.watcher.ui.components.PermissionsList
 import com.jhoxmanv.watcher.ui.screens.MainScreen
@@ -42,10 +39,6 @@ class MainActivity : ComponentActivity() {
     ) { mainViewModel.checkPermissions(this) }
 
     private val requestOverlayLauncher = registerForActivityResult(
-        ActivityResultContracts.StartActivityForResult()
-    ) { mainViewModel.checkPermissions(this) }
-
-    private val requestDeviceAdminLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { mainViewModel.checkPermissions(this) }
 
@@ -83,14 +76,6 @@ class MainActivity : ComponentActivity() {
                                     permissionState = permissionState,
                                     onGrantCameraPermission = { requestPermissionLauncher.launch(Manifest.permission.CAMERA) },
                                     onGrantOverlayPermission = { requestOverlayLauncher.launch(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, "package:$packageName".toUri())) },
-                                    onGrantDeviceAdminPermission = {
-                                        val componentName = ComponentName(this@MainActivity, DeviceAdmin::class.java)
-                                        val intent = Intent(DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN).apply {
-                                            putExtra(DevicePolicyManager.EXTRA_DEVICE_ADMIN, componentName)
-                                            putExtra(DevicePolicyManager.EXTRA_ADD_EXPLANATION, "This app needs device admin permission to turn off the screen.")
-                                        }
-                                        requestDeviceAdminLauncher.launch(intent)
-                                    },
                                     onGrantNotificationPermission = {
                                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                                             requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
@@ -111,7 +96,6 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
-        // Whenever the app comes to the foreground, check permissions
         mainViewModel.checkPermissions(this)
     }
 
