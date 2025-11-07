@@ -15,6 +15,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.getValue
+// PASO 1: Importar LocalContext
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Modifier
 import androidx.core.content.edit
 import androidx.core.net.toUri
@@ -36,9 +38,7 @@ class MainActivity : ComponentActivity() {
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { isGranted: Boolean ->
-        if (isGranted) {
-            mainViewModel.checkPermissions(this)
-        }
+        // No es necesario hacer nada aquí si onResume() ya lo gestiona
     }
 
     private val requestOverlayLauncher = registerForActivityResult(
@@ -63,6 +63,8 @@ class MainActivity : ComponentActivity() {
                 ) {
                     val navController = rememberNavController()
                     val startDestination = if (tutorialShown) "main" else "tutorial"
+                    // PASO 2: Obtener el contexto actual aquí
+                    val context = LocalContext.current
 
                     NavHost(navController = navController, startDestination = startDestination) {
                         composable("tutorial") {
@@ -80,7 +82,8 @@ class MainActivity : ComponentActivity() {
                                     onGrantCameraPermission = { requestPermissionLauncher.launch(Manifest.permission.CAMERA) },
                                     onGrantOverlayPermission = { requestOverlayLauncher.launch(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, "package:$packageName".toUri())) },
                                     onGrantDeviceAdminPermission = {
-                                        val componentName = ComponentName(this, DeviceAdmin::class.java)
+                                        // PASO 3: Usar la variable 'context' en lugar de 'this'
+                                        val componentName = ComponentName(context, DeviceAdmin::class.java)
                                         val intent = Intent(DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN).apply {
                                             putExtra(DevicePolicyManager.EXTRA_DEVICE_ADMIN, componentName)
                                             putExtra(DevicePolicyManager.EXTRA_ADD_EXPLANATION, "This app needs device admin permission to turn off the screen.")
