@@ -1,3 +1,4 @@
 <resources>
-    <string name="app_name">Eyewatch</string>
+    <string name="app_name">watcherjx</string>
+    <string name="device_admin_description">watcherjx uses device administrator privileges to automatically lock the screen when no face is detected. This is a core feature of the application to protect your privacy.</string>
 </resources>

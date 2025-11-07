@@ -1,4 +1,4 @@
-package com.example.eyewatch
+package com.example.watcher
 
 import org.junit.Test
 
