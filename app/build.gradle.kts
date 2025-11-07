@@ -68,6 +68,8 @@ dependencies {
     implementation("androidx.constraintlayout:constraintlayout:2.1.4")
     implementation(libs.androidx.glance.appwidget)
 
+    implementation(libs.androidx.material.icons.extended)
+
     // CameraX
     implementation(libs.camerax.core)
     implementation(libs.camerax.camera2)

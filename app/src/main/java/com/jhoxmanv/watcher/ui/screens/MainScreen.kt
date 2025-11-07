@@ -2,6 +2,7 @@ package com.jhoxmanv.watcher.ui.screens
 
 import android.content.Intent
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -81,7 +82,7 @@ fun MainScreen(onShowTutorial: () -> Unit) {
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             if (showSettings) {
-                SettingsScreen()
+                SettingsScreen(settingsViewModel = settingsViewModel)
             } else {
                 Button(
                     onClick = {
