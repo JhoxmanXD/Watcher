@@ -1,11 +1,12 @@
 package com.jhoxmanv.watcher.ui.screens
 
+import android.content.Intent
 import android.content.res.Configuration
+import androidx.camera.view.PreviewView
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.FaceRetouchingNatural
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -22,11 +23,14 @@ import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import com.google.mlkit.vision.face.Face
 import com.jhoxmanv.watcher.EyeWatchController
 import com.jhoxmanv.watcher.FaceDetectionResult
-import com.jhoxmanv.watcher.ui.components.CameraPreview
+import com.jhoxmanv.watcher.WatcherStateHolder
+import com.jhoxmanv.watcher.service.WatcherService
 import com.jhoxmanv.watcher.ui.components.SettingItem
 import com.jhoxmanv.watcher.viewmodel.SettingsViewModel
 
@@ -37,20 +41,28 @@ fun GazeConfigScreen(navController: NavController) {
     val lifecycleOwner = LocalLifecycleOwner.current
     val settingsViewModel: SettingsViewModel = viewModel()
 
-    var detectionResult by remember { mutableStateOf<FaceDetectionResult?>(null) }
     val eyeWatchController = remember { EyeWatchController(context, lifecycleOwner) }
+    val previewView = remember { PreviewView(context) }
 
-    // Get configuration in the Composable context
+    var largestFace by remember { mutableStateOf<Face?>(null) }
+    var sourceSize by remember { mutableStateOf(IntSize.Zero) }
+    var previewSize by remember { mutableStateOf(IntSize.Zero) }
     val isPortrait = LocalConfiguration.current.orientation == Configuration.ORIENTATION_PORTRAIT
 
-    val tempMinFaceSize by settingsViewModel.tempMinFaceSize
-    val tempEyeOpenProb by settingsViewModel.tempEyeOpenProbability
+    // The UI slider works with sensitivity (0.0 to 1.0), which is the inverse of the threshold.
+    var sliderSensitivity by remember { mutableFloatStateOf(1.0f - settingsViewModel.tempGazeThreshold.floatValue) }
 
-    var previewSize by remember { mutableStateOf(IntSize.Zero) }
-
-    fun handleBackNavigation() {
-        settingsViewModel.saveGazeConfig()
-        navController.popBackStack()
+    // This effect correctly starts/restarts the camera when the slider value changes.
+    LaunchedEffect(Unit) {
+        eyeWatchController.setOnFacesDetectedListener { result ->
+            largestFace = result.faces.maxByOrNull { it.boundingBox.width() * it.boundingBox.height() }
+            sourceSize = IntSize(result.sourceWidth, result.sourceHeight)
+        }
+        // Start with a fixed face size of 50%
+        eyeWatchController.startCamera(
+            minFaceSize = 0.5f,
+            surfaceProvider = previewView.surfaceProvider
+        )
     }
 
     DisposableEffect(Unit) {
@@ -65,8 +77,8 @@ fun GazeConfigScreen(navController: NavController) {
             TopAppBar(
                 title = { Text("Gaze Detection Setup") },
                 navigationIcon = {
-                    IconButton(onClick = { handleBackNavigation() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    IconButton(onClick = { navController.popBackStack() }) { // Discards changes
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back (Discard Changes)")
                     }
                 }
             )
@@ -79,55 +91,43 @@ fun GazeConfigScreen(navController: NavController) {
         ) {
             Box(
                 modifier = Modifier
-                    .weight(0.6f)
+                    .weight(0.7f) // Give more space to the camera
                     .onSizeChanged { previewSize = it }
             ) {
-                LaunchedEffect(tempMinFaceSize) {
-                    eyeWatchController.setOnFacesDetectedListener { result ->
-                        detectionResult = result
-                    }
-                }
-
-                CameraPreview(
-                    modifier = Modifier.fillMaxSize(),
-                    eyeWatchController = eyeWatchController,
-                    minFaceSize = tempMinFaceSize
-                )
+                AndroidView({ previewView }, modifier = Modifier.fillMaxSize())
 
                 Canvas(modifier = Modifier.fillMaxSize()) { ->
-                    detectionResult?.let { result ->
+                    largestFace?.let { face ->
+                        if (previewSize == IntSize.Zero || sourceSize == IntSize.Zero) return@let
+
                         val (scaleX, scaleY) = calculateScaleFactors(
-                            sourceWidth = result.sourceWidth,
-                            sourceHeight = result.sourceHeight,
-                            previewWidth = previewSize.width,
-                            previewHeight = previewSize.height,
-                            isPortrait = isPortrait // Pass the value here
+                            sourceWidth = sourceSize.width, sourceHeight = sourceSize.height,
+                            previewWidth = previewSize.width, previewHeight = previewSize.height,
+                            isPortrait = isPortrait
                         )
 
-                        result.faces.forEach { face ->
-                            val bounds = face.boundingBox
-                            // Adjust coordinates for front camera mirroring
-                            val transformedLeft = size.width - (bounds.right * scaleX)
-                            val transformedTop = bounds.top * scaleY
+                        val bounds = face.boundingBox
+                        val transformedLeft = size.width - (bounds.right * scaleX)
+                        val transformedTop = bounds.top * scaleY
 
+                        drawRect(
+                            color = Color.Green,
+                            topLeft = Offset(transformedLeft, transformedTop),
+                            size = Size(bounds.width() * scaleX, bounds.height() * scaleY),
+                            style = Stroke(width = 2.dp.toPx())
+                        )
+
+                        // Use the temporary threshold for real-time feedback
+                        val isLooking = (face.leftEyeOpenProbability ?: 0f) > settingsViewModel.tempGazeThreshold.floatValue &&
+                                      (face.rightEyeOpenProbability ?: 0f) > settingsViewModel.tempGazeThreshold.floatValue
+
+                        if (isLooking) {
                             drawRect(
-                                color = Color.Green,
-                                topLeft = Offset(transformedLeft, transformedTop),
-                                size = Size(bounds.width() * scaleX, bounds.height() * scaleY),
-                                style = Stroke(width = 2.dp.toPx())
+                                color = Color.Blue,
+                                topLeft = Offset(transformedLeft + 5, transformedTop + 5),
+                                size = Size((bounds.width() * scaleX) - 10, (bounds.height() * scaleY) - 10),
+                                style = Stroke(width = 3.dp.toPx())
                             )
-
-                            val isLooking = (face.leftEyeOpenProbability ?: 0f) > tempEyeOpenProb &&
-                                          (face.rightEyeOpenProbability ?: 0f) > tempEyeOpenProb
-
-                            if (isLooking) {
-                                drawRect(
-                                    color = Color.Blue,
-                                    topLeft = Offset(transformedLeft + 5, transformedTop + 5),
-                                    size = Size((bounds.width() * scaleX) - 10, (bounds.height() * scaleY) - 10),
-                                    style = Stroke(width = 3.dp.toPx())
-                                )
-                            }
                         }
                     }
                 }
@@ -136,32 +136,22 @@ fun GazeConfigScreen(navController: NavController) {
             // Controls section
             Column(
                 modifier = Modifier
-                    .weight(0.4f)
-                    .padding(16.dp)
+                    .weight(0.3f) // Less space for controls
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.Center
             ) {
                 SettingItem(
-                    icon = Icons.Default.FaceRetouchingNatural,
-                    title = "Minimum Face Size",
-                    description = "Ignores faces that are too small or far away.",
-                    valueLabel = { Text("${(tempMinFaceSize * 100).toInt()}%", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold) }
-                ) {
-                    Slider(
-                        value = tempMinFaceSize,
-                        onValueChange = { settingsViewModel.onTempMinFaceSizeChanged(it) },
-                        valueRange = 0.1f..1.0f,
-                        steps = 9
-                    )
-                }
-
-                SettingItem(
                     icon = Icons.Default.Visibility,
-                    title = "Gaze Detection Sensitivity",
-                    description = "Ensures the user is looking at the screen.",
-                    valueLabel = { Text("${(tempEyeOpenProb * 100).toInt()}%", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold) }
+                    title = "Gaze Sensitivity",
+                    description = "Higher values are more sensitive.",
+                    valueLabel = { Text("${(sliderSensitivity * 100).toInt()}%", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold) }
                 ) {
                     Slider(
-                        value = tempEyeOpenProb,
-                        onValueChange = { settingsViewModel.onTempEyeOpenProbabilityChanged(it) },
+                        value = sliderSensitivity,
+                        onValueChange = {
+                            sliderSensitivity = it
+                            settingsViewModel.onTempGazeSensitivityChanged(it)
+                        },
                         valueRange = 0.1f..1.0f,
                         steps = 9
                     )
@@ -170,10 +160,18 @@ fun GazeConfigScreen(navController: NavController) {
                 Spacer(Modifier.weight(1f))
 
                 Button(
-                    onClick = { handleBackNavigation() },
+                    onClick = {
+                        settingsViewModel.saveGazeConfig()
+                        if (WatcherStateHolder.isServiceRunning.value) {
+                            val intent = Intent(context, WatcherService::class.java)
+                            context.stopService(intent)
+                            context.startService(intent)
+                        }
+                        navController.popBackStack()
+                    },
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Save and Exit")
+                    Text("Apply and Exit")
                 }
             }
         }
@@ -181,17 +179,11 @@ fun GazeConfigScreen(navController: NavController) {
 }
 
 private fun calculateScaleFactors(
-    sourceWidth: Int,
-    sourceHeight: Int,
-    previewWidth: Int,
-    previewHeight: Int,
+    sourceWidth: Int, sourceHeight: Int,
+    previewWidth: Int, previewHeight: Int,
     isPortrait: Boolean
 ): Pair<Float, Float> {
-    val (width, height) = if (isPortrait) {
-        sourceHeight to sourceWidth // In portrait, the camera image is landscape
-    } else {
-        sourceWidth to sourceHeight
-    }
+    val (width, height) = if (isPortrait) sourceHeight to sourceWidth else sourceWidth to sourceHeight
     val scaleX = previewWidth.toFloat() / width.toFloat()
     val scaleY = previewHeight.toFloat() / height.toFloat()
     return scaleX to scaleY

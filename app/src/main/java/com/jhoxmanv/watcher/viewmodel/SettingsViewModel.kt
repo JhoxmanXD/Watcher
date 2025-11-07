@@ -10,40 +10,37 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 
     private val sharedPreferences = application.getSharedPreferences("watcher_settings", Context.MODE_PRIVATE)
 
+    // Default gaze sensitivity is 80% (threshold of 0.2f). Min face size is fixed at 50% (0.5f).
+    private val initialGazeThreshold = sharedPreferences.getFloat("gaze_threshold", 0.2f)
+    private val initialScreenOffTime = sharedPreferences.getFloat("screen_off_time", 10f)
+
     // --- Live, saved values --- //
-    val minFaceSize = mutableFloatStateOf(sharedPreferences.getFloat("min_face_size", 0.4f))
-    val eyeOpenProbability = mutableFloatStateOf(sharedPreferences.getFloat("eye_open_prob", 0.6f))
-    val screenOffTime = mutableFloatStateOf(sharedPreferences.getFloat("screen_off_time", 10f))
+    var gazeThreshold = mutableFloatStateOf(initialGazeThreshold)
+    var screenOffTime = mutableFloatStateOf(initialScreenOffTime)
 
-    // --- Temporary values for the config screen --- //
-    var tempMinFaceSize = mutableFloatStateOf(minFaceSize.floatValue)
-    var tempEyeOpenProbability = mutableFloatStateOf(eyeOpenProbability.floatValue)
+    // --- Temporary value for the config screen --- //
+    var tempGazeThreshold = mutableFloatStateOf(gazeThreshold.floatValue)
 
-    // --- Functions to update temporary values --- //
-    fun onTempMinFaceSizeChanged(newValue: Float) {
-        tempMinFaceSize.floatValue = newValue
+    /**
+     * The UI slider represents sensitivity from 0.0 to 1.0.
+     * We convert it to a threshold where high sensitivity means a low threshold.
+     * e.g., 80% sensitivity (0.8) -> 20% threshold (0.2)
+     */
+    fun onTempGazeSensitivityChanged(newSliderValue: Float) {
+        tempGazeThreshold.floatValue = 1.0f - newSliderValue
     }
 
-    fun onTempEyeOpenProbabilityChanged(newValue: Float) {
-        tempEyeOpenProbability.floatValue = newValue
-    }
-
-    // --- Functions to save or discard changes --- //
     fun saveGazeConfig() {
-        minFaceSize.floatValue = tempMinFaceSize.floatValue
-        eyeOpenProbability.floatValue = tempEyeOpenProbability.floatValue
+        gazeThreshold.floatValue = tempGazeThreshold.floatValue
         sharedPreferences.edit {
-            putFloat("min_face_size", minFaceSize.floatValue)
-            putFloat("eye_open_prob", eyeOpenProbability.floatValue)
+            putFloat("gaze_threshold", gazeThreshold.floatValue)
         }
     }
 
     fun resetTempGazeConfig() {
-        tempMinFaceSize.floatValue = minFaceSize.floatValue
-        tempEyeOpenProbability.floatValue = eyeOpenProbability.floatValue
+        tempGazeThreshold.floatValue = gazeThreshold.floatValue
     }
 
-    // --- Function for the main screen slider --- //
     fun onScreenOffTimeChanged(newValue: Float) {
         screenOffTime.floatValue = newValue
         sharedPreferences.edit { putFloat("screen_off_time", newValue) }
