@@ -1,47 +1,82 @@
 [versions]
-agp = "8.13.0"
-kotlin = "1.9.23"
-coreKtx = "1.13.1"
-junit = "4.13.2"
-junitVersion = "1.2.1"
-espressoCore = "3.6.1"
-lifecycleRuntimeKtx = "2.8.2"
-activityCompose = "1.9.0"
-composeBom = "2024.04.01"
-composeCompiler = "1.5.12"
-camerax = "1.3.4"
-glance = "1.1.0"
+# --- Versiones Principales ---
+agp = "8.13.0"               # Versión del Plugin de Android para Gradle.
+kotlin = "2.2.21"             # Versión de Kotlin. Clave para la compatibilidad.
+composeCompiler = "1.5.14"  # Versión del Compilador de Compose, compatible con Kotlin 2.0.0.
+compose = "1.3.0"
+
+# --- Dependencias de AndroidX ---
+coreKtx = "1.17.0"
+lifecycleRuntimeKtx = "2.9.4"
+activityCompose = "1.11.0"
+composeBom = "2025.11.00"   # BOM de Compose. Gestiona las versiones de las librerías de Compose.
+material = "1.13.0"
+navigationCompose = "2.9.6"
+camerax = "1.5.1"
+glance = "1.1.1"
 cardview = "1.0.0"
-googleServices = "4.4.4"
-navigationCompose = "2.7.7"
-materialIcons = "1.6.8"
+constraintlayout = "2.2.1"
+junitVersion = "1.3.0"
+
+# --- Dependencias de Terceros ---
+firebaseBom = "34.5.0"
+mlkitFaceDetection = "17.1.0"
+googleServicesPlugin = "4.4.4" # Versión del plugin de Google Services.
+
+# --- Dependencias de Test ---
+junit = "4.13.2"
+espressoCore = "3.7.0"
 
 [libraries]
+# --- AndroidX Core & Lifecycle ---
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
-junit = { group = "junit", name = "junit", version.ref = "junit" }
-androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
-androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
 androidx-lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycleRuntimeKtx" }
 androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }
+
+# --- Compose ---
+# El BOM (Bill of Materials) nos permite omitir las versiones en las librerías individuales de Compose.
 androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "composeBom" }
 androidx-compose-ui = { group = "androidx.compose.ui", name = "ui" }
 androidx-compose-ui-graphics = { group = "androidx.compose.ui", name = "ui-graphics" }
-androidx-compose-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling" }
 androidx-compose-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-tooling-preview" }
-androidx-compose-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest" }
-androidx-compose-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" } # Typo fixed
 androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3" }
-androidx-glance-appwidget = { group = "androidx.glance", name = "glance-appwidget", version.ref = "glance" }
-androidx-cardview = { group = "androidx.cardview", name = "cardview", version.ref = "cardview" }
+androidx-compose-material-icons-extended = { group = "androidx.compose.material", name = "material-icons-extended" }
+
+# --- Navigation & Layout ---
 androidx-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigationCompose" }
+androidx-cardview = { group = "androidx.cardview", name = "cardview", version.ref = "cardview" }
+androidx-constraintlayout = { group = "androidx.constraintlayout", name = "constraintlayout", version.ref = "constraintlayout" }
+
+# --- CameraX ---
 camerax-core = { group = "androidx.camera", name = "camera-core", version.ref = "camerax" }
 camerax-camera2 = { group = "androidx.camera", name = "camera-camera2", version.ref = "camerax" }
 camerax-lifecycle = { group = "androidx.camera", name = "camera-lifecycle", version.ref = "camerax" }
 camerax-view = { group = "androidx.camera", name = "camera-view", version.ref = "camerax" }
 camerax-extensions = { group = "androidx.camera", name = "camera-extensions", version.ref = "camerax" }
-androidx-material-icons-extended = { group = "androidx.compose.material", name = "material-icons-extended", version.ref = "materialIcons" }
+
+# --- Widgets (Glance) ---
+androidx-glance-appwidget = { group = "androidx.glance", name = "glance-appwidget", version.ref = "glance" }
+
+# --- Firebase & ML Kit ---
+firebase-bom = { group = "com.google.firebase", name = "firebase-bom", version.ref = "firebaseBom" }
+firebase-analytics = { group = "com.google.firebase", name = "firebase-analytics" }
+google-mlkit-face-detection = { group = "com.google.android.gms", name = "play-services-mlkit-face-detection", version.ref = "mlkitFaceDetection" }
+
+# --- Test & Debugging ---
+junit = { group = "junit", name = "junit", version.ref = "junit" }
+androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
+androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
+androidx-compose-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling" }
+androidx-compose-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest" }
+androidx-compose-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
+material = { module = "com.google.android.material:material", version.ref = "material" }
+
 
 [plugins]
+# --- Plugins de Gradle ---
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
-google-services = { id = "com.google.gms.google-services", version.ref = "googleServices" }
+google-services = { id = "com.google.gms.google-services", version.ref = "googleServicesPlugin" }
+# CORRECCIÓN: Añadir el plugin del compilador de Compose. Es obligatorio con Kotlin 2.0+.
+kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+

@@ -2,16 +2,19 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.google.services)
+    alias(libs.plugins.kotlin.compose)
 }
 
 android {
     namespace = "com.jhoxmanv.watcher"
-    compileSdk = 34
+    //noinspection GradleDependency
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.jhoxmanv.watcher"
         minSdk = 29
-        targetSdk = 34
+        //noinspection OldTargetApi
+        targetSdk = 36
         versionCode = 1
         versionName = "1.0"
 
@@ -32,11 +35,6 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-
-    kotlinOptions {
-        jvmTarget = "17"
-    }
-
     buildFeatures {
         compose = true
         buildConfig = true
@@ -45,15 +43,20 @@ android {
     composeOptions {
         kotlinCompilerExtensionVersion = libs.versions.composeCompiler.get()
     }
+    java {
+        toolchain {
+            languageVersion = JavaLanguageVersion.of(17)
+        }
+    }
 }
 
 dependencies {
     // Platform and Firebase
-    implementation(platform("com.google.firebase:firebase-bom:33.1.2"))
-    implementation("com.google.firebase:firebase-analytics")
+    implementation(platform(libs.firebase.bom)) // Usando el alias del BOM
+    implementation(libs.firebase.analytics)    // Usando el alias de Analytics
 
     // ML Kit
-    implementation("com.google.android.gms:play-services-mlkit-face-detection:16.1.7")
+    implementation(libs.google.mlkit.face.detection) // Usando el alias de ML Kit
 
     // AndroidX & UI
     implementation(libs.androidx.core.ktx)
@@ -63,13 +66,15 @@ dependencies {
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.material3)
+    implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.cardview)
-    implementation("androidx.constraintlayout:constraintlayout:2.1.4")
+    implementation(libs.androidx.constraintlayout)
     implementation(libs.androidx.glance.appwidget)
+    implementation("androidx.compose.material:material-icons-extended-android:1.7.8")
 
     // Material Icons
-    implementation(libs.androidx.material.icons.extended)
+    implementation(libs.material)
 
     // CameraX
     implementation(libs.camerax.core)
