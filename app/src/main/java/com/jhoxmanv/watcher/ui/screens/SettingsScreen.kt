@@ -4,7 +4,9 @@ import android.content.Intent
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.Tune
@@ -76,6 +78,8 @@ fun SettingsScreen(
                     steps = 59,
                     modifier = Modifier.weight(1f)
                 )
+                // Add a spacer to create a gap and make the slider narrower
+                Spacer(modifier = Modifier.width(16.dp)) 
                 InfoTooltip("The time in seconds to wait before locking the screen when no face is detected.")
             }
         }
