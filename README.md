@@ -95,4 +95,4 @@ Esto significa que eres libre de usar, compartir y modificar este trabajo, siemp
 Consulta el archivo `LICENSE.md` para más detalles.
 ---
 
-Creado con ❤️ por [JhoxmanV] - github.com/JhoxmanXD
+Creado con ❤️ por JhoxmanV - github.com/JhoxmanXD
