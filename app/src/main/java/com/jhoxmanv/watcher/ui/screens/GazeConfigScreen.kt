@@ -12,8 +12,6 @@ import androidx.compose.material.icons.filled.ScreenRotation
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -21,7 +19,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
@@ -30,7 +27,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.google.mlkit.vision.face.Face
 import com.jhoxmanv.watcher.EyeWatchController
-import com.jhoxmanv.watcher.FaceDetectionResult
 import com.jhoxmanv.watcher.WatcherStateHolder
 import com.jhoxmanv.watcher.service.WatcherService
 import com.jhoxmanv.watcher.ui.components.SettingItem
@@ -41,7 +37,7 @@ import kotlin.math.abs
 @Composable
 fun GazeConfigScreen(navController: NavController) {
     val context = LocalContext.current
-    val lifecycleOwner = LocalLifecycleOwner.current
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
     val settingsViewModel: SettingsViewModel = viewModel()
 
     val eyeWatchController = remember { EyeWatchController(context, lifecycleOwner) }
@@ -90,11 +86,11 @@ fun GazeConfigScreen(navController: NavController) {
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            // Arriba: Vista previa de la cámara (30% de la altura)
+            // Top 50%: Camera Preview
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(0.3f)
+                    .weight(0.5f)
                     .onSizeChanged { previewSize = it }
             ) {
                 AndroidView({ previewView }, modifier = Modifier.fillMaxSize())
@@ -119,7 +115,7 @@ fun GazeConfigScreen(navController: NavController) {
                         )
 
                         val eyesAreOpen = (face.leftEyeOpenProbability ?: 0f) > settingsViewModel.tempGazeThreshold.floatValue &&
-                                (face.rightEyeOpenProbability ?: 0f) > settingsViewModel.tempGazeThreshold.floatValue
+                                      (face.rightEyeOpenProbability ?: 0f) > settingsViewModel.tempGazeThreshold.floatValue
 
                         val headIsFacingForward = abs(face.headEulerAngleY) < sliderYawThreshold &&
                                 abs(face.headEulerAngleX) < sliderPitchThreshold
@@ -136,97 +132,89 @@ fun GazeConfigScreen(navController: NavController) {
                 }
             }
 
-            // ==========================================================
-            // INICIO DE LA CORRECCIÓN
-            // ==========================================================
-
-            // Abajo: Controles con scroll (70% de la altura)
-            Column(
+            // Bottom 50%: Controls with a solid background
+            Surface(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(0.7f)
-                    .padding(horizontal = 16.dp, vertical = 8.dp), // Padding general aquí
+                    .weight(0.5f),
+                color = MaterialTheme.colorScheme.surface
             ) {
-                // Columna INTERIOR que contiene SOLO los sliders y es la que tiene el scroll
                 Column(
                     modifier = Modifier
-                        .weight(1f) // Ocupa todo el espacio disponible, MENOS el del botón
-                        .verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(8.dp) // Espacio entre sliders
+                        .fillMaxSize()
+                        .padding(16.dp)
                 ) {
-                    SettingItem(
-                        icon = Icons.Default.Visibility,
-                        title = "Eye Open Sensitivity",
-                        description = "Higher values are more sensitive.",
-                        valueLabel = { Text("${(sliderSensitivity * 100).toInt()}%", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold) }
-                    ) {
-                        Slider(
-                            value = sliderSensitivity,
-                            onValueChange = {
-                                sliderSensitivity = it
-                                settingsViewModel.onTempGazeSensitivityChanged(it)
-                            },
-                            valueRange = 0.1f..1.0f,
-                            steps = 9
-                        )
-                    }
-
-                    SettingItem(
-                        icon = Icons.Default.ScreenRotation,
-                        title = "Head Yaw Threshold (Left/Right)",
-                        description = "Max angle to be considered 'looking forward'.",
-                        valueLabel = { Text("${sliderYawThreshold.toInt()}°", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold) }
-                    ) {
-                        Slider(
-                            value = sliderYawThreshold,
-                            onValueChange = {
-                                sliderYawThreshold = it
-                                settingsViewModel.onTempYawThresholdChanged(it)
-                            },
-                            valueRange = 5f..45f
-                        )
-                    }
-
-                    SettingItem(
-                        icon = Icons.Default.ScreenRotation,
-                        title = "Head Pitch Threshold (Up/Down)",
-                        description = "Max angle to be considered 'looking forward'.",
-                        valueLabel = { Text("${sliderPitchThreshold.toInt()}°", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold) }
-                    ) {
-                        Slider(
-                            value = sliderPitchThreshold,
-                            onValueChange = {
-                                sliderPitchThreshold = it
-                                settingsViewModel.onTempPitchThresholdChanged(it)
-                            },
-                            valueRange = 5f..45f
-                        )
-                    }
-                }
-
-                // Spacer para asegurar que el botón no se pegue a los sliders
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // El botón se queda al final, FUERA de la columna con scroll
-                Button(
-                    onClick = {
-                        settingsViewModel.saveGazeConfig()
-                        if (WatcherStateHolder.isServiceRunning.value) {
-                            val intent = Intent(context, WatcherService::class.java)
-                            context.stopService(intent)
-                            context.startService(intent)
+                    // This inner column contains only the sliders and is scrollable
+                    Column(modifier = Modifier.weight(1f).verticalScroll(rememberScrollState())) {
+                        SettingItem(
+                            icon = Icons.Default.Visibility,
+                            title = "Eye Open Sensitivity",
+                            description = "Higher values are more sensitive.",
+                            valueLabel = { Text("${(sliderSensitivity * 100).toInt()}%", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold) }
+                        ) {
+                            Slider(
+                                value = sliderSensitivity,
+                                onValueChange = {
+                                    sliderSensitivity = it
+                                    settingsViewModel.onTempGazeSensitivityChanged(it)
+                                },
+                                valueRange = 0.1f..1.0f,
+                                steps = 9
+                            )
                         }
-                        navController.popBackStack()
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Apply and Exit")
+
+                        SettingItem(
+                            icon = Icons.Default.ScreenRotation,
+                            title = "Head Yaw Threshold (Left/Right)",
+                            description = "Max angle to be considered 'looking forward'.",
+                            valueLabel = { Text("${sliderYawThreshold.toInt()}°", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold) }
+                        ) {
+                            Slider(
+                                value = sliderYawThreshold,
+                                onValueChange = { 
+                                    sliderYawThreshold = it
+                                    settingsViewModel.onTempYawThresholdChanged(it) 
+                                },
+                                valueRange = 5f..45f
+                            )
+                        }
+
+                        SettingItem(
+                            icon = Icons.Default.ScreenRotation,
+                            title = "Head Pitch Threshold (Up/Down)",
+                            description = "Max angle to be considered 'looking forward'.",
+                            valueLabel = { Text("${sliderPitchThreshold.toInt()}°", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold) }
+                        ) {
+                            Slider(
+                                value = sliderPitchThreshold,
+                                onValueChange = { 
+                                    sliderPitchThreshold = it
+                                    settingsViewModel.onTempPitchThresholdChanged(it) 
+                                },
+                                valueRange = 5f..45f
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp)) // Fixed spacer
+
+                    // Button is outside the scrollable column, anchored to the bottom
+                    Button(
+                        onClick = {
+                            settingsViewModel.saveGazeConfig()
+                            if (WatcherStateHolder.isServiceRunning.value) {
+                                val intent = Intent(context, WatcherService::class.java)
+                                context.stopService(intent)
+                                context.startService(intent)
+                            }
+                            navController.popBackStack()
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Apply and Exit")
+                    }
                 }
             }
-
-            // ==========================================================
-            // FIN DE LA CORRECCIÓN
-            // ==========================================================
         }
     }
 }
