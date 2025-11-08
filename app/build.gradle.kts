@@ -1,7 +1,6 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
-    alias(libs.plugins.google.services)
     alias(libs.plugins.kotlin.compose)
 }
 
@@ -51,10 +50,6 @@ android {
 }
 
 dependencies {
-    // Platform and Firebase
-    implementation(platform(libs.firebase.bom)) // Usando el alias del BOM
-    implementation(libs.firebase.analytics)    // Usando el alias de Analytics
-
     // ML Kit
     implementation(libs.google.mlkit.face.detection) // Usando el alias de ML Kit
 
@@ -71,7 +66,7 @@ dependencies {
     implementation(libs.androidx.cardview)
     implementation(libs.androidx.constraintlayout)
     implementation(libs.androidx.glance.appwidget)
-    implementation("androidx.compose.material:material-icons-extended-android:1.7.8")
+    implementation(libs.androidx.compose.material.icons.extended.android)
 
     // Material Icons
     implementation(libs.material)

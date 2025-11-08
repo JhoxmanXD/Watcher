@@ -7,7 +7,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Help
+import androidx.compose.material.icons.automirrored.filled.Help
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -27,7 +27,7 @@ fun TutorialScreen(onFinished: () -> Unit) {
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Icon(Icons.Default.Help, contentDescription = "Tutorial", modifier = Modifier.height(120.dp))
+        Icon(Icons.AutoMirrored.Filled.Help, contentDescription = "Tutorial", modifier = Modifier.height(120.dp))
         Spacer(modifier = Modifier.height(32.dp))
         Text(
             "Welcome to Watcher!",
