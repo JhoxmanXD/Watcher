@@ -51,7 +51,7 @@ android {
 
 dependencies {
     // ML Kit
-    implementation(libs.google.mlkit.face.detection) // Usando el alias de ML Kit
+    implementation(libs.google.mlkit.face.detection)
 
     // AndroidX & UI
     implementation(libs.androidx.core.ktx)
@@ -67,6 +67,7 @@ dependencies {
     implementation(libs.androidx.constraintlayout)
     implementation(libs.androidx.glance.appwidget)
     implementation(libs.androidx.compose.material.icons.extended.android)
+    implementation(libs.androidx.fragment)
 
     // Material Icons
     implementation(libs.material)

@@ -1,10 +1,12 @@
 [versions]
 # --- Versiones Principales ---
 agp = "8.13.0"               # Versión del Plugin de Android para Gradle.
+fragment = "1.8.9"
 kotlin = "2.2.21"             # Versión de Kotlin. Clave para la compatibilidad.
 composeCompiler = "1.5.14"  # Versión del Compilador de Compose, compatible con Kotlin 2.0.0.
 compose = "1.3.0"
 materialIconsExtended = "1.7.8"
+androidxFragment = "1.8.9"
 
 # --- Dependencias de AndroidX ---
 coreKtx = "1.17.0"
@@ -33,6 +35,7 @@ espressoCore = "3.7.0"
 # --- AndroidX Core & Lifecycle ---
 androidx-compose-material-icons-extended-android = { module = "androidx.compose.material:material-icons-extended-android", version.ref = "materialIconsExtendedAndroid" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
+androidx-fragment = { module = "androidx.fragment:fragment", version.ref = "fragment" }
 androidx-lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycleRuntimeKtx" }
 androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }
 
