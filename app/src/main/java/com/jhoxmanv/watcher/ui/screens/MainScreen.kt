@@ -10,7 +10,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.HelpOutline
+import androidx.compose.material.icons.automirrored.filled.HelpOutline
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Stop
@@ -52,7 +52,7 @@ fun MainScreen(
                 title = { Text("watcherjx", fontWeight = FontWeight.Bold, fontSize = 24.sp) },
                 actions = {
                     IconButton(onClick = onShowTutorial) {
-                        Icon(Icons.Default.HelpOutline, contentDescription = "Tutorial")
+                        Icon(Icons.AutoMirrored.Filled.HelpOutline, contentDescription = "Tutorial")
                     }
                     IconButton(onClick = onShowSettings) {
                         Icon(Icons.Default.Settings, contentDescription = "Settings")
