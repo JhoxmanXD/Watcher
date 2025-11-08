@@ -23,7 +23,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.google.mlkit.vision.face.Face
 import com.jhoxmanv.watcher.EyeWatchController
@@ -35,10 +34,12 @@ import kotlin.math.abs
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun GazeConfigScreen(navController: NavController) {
+fun GazeConfigScreen(
+    navController: NavController,
+    settingsViewModel: SettingsViewModel // Receive the shared ViewModel
+) {
     val context = LocalContext.current
     val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
-    val settingsViewModel: SettingsViewModel = viewModel()
 
     val eyeWatchController = remember { EyeWatchController(context, lifecycleOwner) }
     val previewView = remember { PreviewView(context) }

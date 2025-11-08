@@ -1,7 +1,6 @@
 package com.jhoxmanv.watcher
 
 import android.Manifest
-import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
@@ -46,9 +45,6 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val sharedPreferences = getPreferences(Context.MODE_PRIVATE)
-        val tutorialShown = sharedPreferences.getBoolean("tutorial_shown", false)
-
         setContent {
             WatcherTheme {
                 Surface(
@@ -56,21 +52,25 @@ class MainActivity : ComponentActivity() {
                     color = MaterialTheme.colorScheme.background
                 ) {
                     val navController = rememberNavController()
-                    val startDestination = if (tutorialShown) "main" else "tutorial"
+                    // Create a single, shared instance of the ViewModel for the entire navigation graph.
+                    val settingsViewModel: SettingsViewModel = viewModel()
+                    val startDestination = if (getPreferences(MODE_PRIVATE).getBoolean("tutorial_shown", false)) "main" else "tutorial"
                     val permissionState by mainViewModel.permissionState
 
                     NavHost(navController = navController, startDestination = startDestination) {
                         composable("tutorial") {
                             TutorialScreen(onFinished = {
-                                sharedPreferences.edit { putBoolean("tutorial_shown", true) }
+                                getPreferences(MODE_PRIVATE).edit { putBoolean("tutorial_shown", true) }
                                 navController.navigate("main") { popUpTo("tutorial") { inclusive = true } }
                             })
                         }
                         composable("main") {
                             if (permissionState.allGranted()) {
                                 MainScreen(
+                                    settingsViewModel = settingsViewModel, // Pass the shared instance
                                     onShowTutorial = { navController.navigate("tutorial") },
-                                    onShowSettings = { navController.navigate("settings") }
+                                    onShowSettings = { navController.navigate("settings") },
+                                    onNavigateToGazeConfig = { navController.navigate("gaze_config") }
                                 )
                             } else {
                                 PermissionsList(
@@ -86,14 +86,16 @@ class MainActivity : ComponentActivity() {
                             }
                         }
                         composable("settings") {
-                            val settingsViewModel: SettingsViewModel = viewModel()
                             SettingsScreen(
-                                settingsViewModel = settingsViewModel,
+                                settingsViewModel = settingsViewModel, // Pass the shared instance
                                 onNavigateToGazeConfig = { navController.navigate("gaze_config") }
                             )
                         }
                         composable("gaze_config") {
-                            GazeConfigScreen(navController = navController) // Pass NavController here
+                            GazeConfigScreen(
+                                navController = navController,
+                                settingsViewModel = settingsViewModel // Pass the shared instance
+                            )
                         }
                     }
                 }

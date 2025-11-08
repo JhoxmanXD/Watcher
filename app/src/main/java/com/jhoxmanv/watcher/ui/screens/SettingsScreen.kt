@@ -2,6 +2,7 @@ package com.jhoxmanv.watcher.ui.screens
 
 import android.content.Intent
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -69,18 +70,20 @@ fun SettingsScreen(
                 Text("${screenOffTime.toInt()}s", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
             }
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Slider(
-                    value = screenOffTime,
-                    onValueChange = { settingsViewModel.onScreenOffTimeChanged(it) },
-                    onValueChangeFinished = { onSettingsChanged() },
-                    valueRange = 1f..60f,
-                    steps = 59,
-                    modifier = Modifier.weight(1f)
-                )
-                // Add a spacer to create a gap and make the slider narrower
-                Spacer(modifier = Modifier.width(16.dp)) 
-                InfoTooltip("The time in seconds to wait before locking the screen when no face is detected.")
+            // Add a Box with padding to constrain the width of the Row
+            Box(modifier = Modifier.padding(horizontal = 8.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Slider(
+                        value = screenOffTime,
+                        onValueChange = { settingsViewModel.onScreenOffTimeChanged(it) },
+                        onValueChangeFinished = { onSettingsChanged() },
+                        valueRange = 1f..60f,
+                        steps = 59,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Spacer(modifier = Modifier.width(16.dp))
+                    InfoTooltip("The time in seconds to wait before locking the screen when no face is detected.")
+                }
             }
         }
     }
