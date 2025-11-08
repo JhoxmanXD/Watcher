@@ -85,8 +85,14 @@ Las contribuciones son siempre bienvenidas. Si quieres mejorar la aplicación, p
 
 ## 📄 Licencia
 
-Este proyecto está bajo la Licencia MIT. Consulta el archivo `LICENSE` para más detalles.
+Este proyecto está bajo la Licencia **Creative Commons Atribución-NoComercial-CompartirIgual 4.0 Internacional (CC BY-NC-SA 4.0)**.
 
+Esto significa que eres libre de usar, compartir y modificar este trabajo, siempre y cuando:
+1.  Me des el crédito apropiado.
+2.  **No lo uses para fines comerciales.**
+3.  Si lo modificas, lo compartas bajo esta misma licencia.
+
+Consulta el archivo `LICENSE.md` para más detalles.
 ---
 
 Creado con ❤️ por [JhoxmanV] - github.com/JhoxmanXD
