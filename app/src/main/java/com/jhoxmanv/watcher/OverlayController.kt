@@ -10,8 +10,9 @@ import android.view.Gravity
 import android.view.MotionEvent
 import android.view.WindowManager
 import android.widget.FrameLayout
+import androidx.lifecycle.Lifecycle
 
-class OverlayController(private val context: Context) {
+class OverlayController(private val context: Context, private val lifecycle: Lifecycle) {
 
     private val windowManager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
     private var overlayView: FrameLayout? = null
@@ -30,6 +31,10 @@ class OverlayController(private val context: Context) {
         }
 
         Handler(Looper.getMainLooper()).post {
+            if (!lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
+                Log.d(TAG, "Not showing overlay as lifecycle is not active.")
+                return@post
+            }
             try {
                 // Modern, simple, and safe WindowManager parameters.
                 val params = WindowManager.LayoutParams(

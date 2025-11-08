@@ -5,10 +5,8 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
-import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
-import android.os.Build
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
@@ -25,9 +23,10 @@ import com.jhoxmanv.watcher.R
 import com.jhoxmanv.watcher.WatcherStateHolder
 import kotlin.math.abs
 
+
 class WatcherService : Service(), LifecycleOwner {
 
-    private val CHANNEL_ID = "WatcherServiceChannel"
+    private val channelId = "WatcherServiceChannel"
     private lateinit var eyeWatchController: EyeWatchController
     private lateinit var overlayController: OverlayController
     private val lifecycleRegistry = LifecycleRegistry(this)
@@ -45,9 +44,9 @@ class WatcherService : Service(), LifecycleOwner {
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_CREATE)
         WatcherStateHolder.isServiceRunning.value = true
 
-        sharedPreferences = getSharedPreferences("watcher_settings", Context.MODE_PRIVATE)
+        sharedPreferences = getSharedPreferences("watcher_settings", MODE_PRIVATE)
         eyeWatchController = EyeWatchController(this, this)
-        overlayController = OverlayController(this)
+        overlayController = OverlayController(this, lifecycle)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -120,8 +119,8 @@ class WatcherService : Service(), LifecycleOwner {
 
     override fun onDestroy() {
         super.onDestroy()
-        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY)
         WatcherStateHolder.isServiceRunning.value = false
+        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY)
         cancelScreenLock()
         overlayController.hideOverlay()
         eyeWatchController.stopCamera()
@@ -137,7 +136,7 @@ class WatcherService : Service(), LifecycleOwner {
         val stopIntent = Intent(this, WatcherService::class.java).apply { action = "STOP_SERVICE" }
         val stopPendingIntent = PendingIntent.getService(this, 0, stopIntent, PendingIntent.FLAG_IMMUTABLE)
 
-        return NotificationCompat.Builder(this, CHANNEL_ID)
+        return NotificationCompat.Builder(this, channelId)
             .setContentTitle("Watcher is Active")
             .setContentText("Protecting your privacy by monitoring your presence.")
             .setSmallIcon(R.drawable.ic_launcher_foreground)
@@ -148,10 +147,8 @@ class WatcherService : Service(), LifecycleOwner {
     }
 
     private fun createNotificationChannel() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val serviceChannel = NotificationChannel(CHANNEL_ID, "Watcher Service Channel", NotificationManager.IMPORTANCE_DEFAULT)
-            getSystemService(NotificationManager::class.java).createNotificationChannel(serviceChannel)
-        }
+        val serviceChannel = NotificationChannel(channelId, "Watcher Service Channel", NotificationManager.IMPORTANCE_DEFAULT)
+        getSystemService(NotificationManager::class.java).createNotificationChannel(serviceChannel)
     }
 
     override val lifecycle: Lifecycle

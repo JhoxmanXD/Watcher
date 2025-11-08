@@ -72,17 +72,24 @@ fun SettingsScreen(
         ) {
             // Add a Box with padding to constrain the width of the Row
             Box(modifier = Modifier.padding(horizontal = 8.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Slider(
-                        value = screenOffTime,
-                        onValueChange = { settingsViewModel.onScreenOffTimeChanged(it) },
-                        onValueChangeFinished = { onSettingsChanged() },
-                        valueRange = 1f..60f,
-                        steps = 59,
-                        modifier = Modifier.weight(1f)
+                Column {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Slider(
+                            value = screenOffTime,
+                            onValueChange = { settingsViewModel.onScreenOffTimeChanged(it) },
+                            onValueChangeFinished = { onSettingsChanged() },
+                            valueRange = 1f..60f,
+                            steps = 59,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Spacer(modifier = Modifier.width(16.dp))
+                        InfoTooltip("The time in seconds to wait before locking the screen when no face is detected.")
+                    }
+                    Text(
+                        text = "1 second is recommended for maximum privacy.",
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(start = 8.dp, top = 4.dp)
                     )
-                    Spacer(modifier = Modifier.width(16.dp))
-                    InfoTooltip("The time in seconds to wait before locking the screen when no face is detected.")
                 }
             }
         }

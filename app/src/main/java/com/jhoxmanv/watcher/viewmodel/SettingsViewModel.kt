@@ -14,7 +14,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     private val defaultGazeThreshold = 0.2f      // Corresponds to 80% sensitivity (1.0 - 0.8)
     private val defaultYawThreshold = 20f
     private val defaultPitchThreshold = 20f
-    private val defaultScreenOffTime = 10f
+    private val defaultScreenOffTime = 1f
 
     // --- Live, saved values --- //
     var gazeThreshold = mutableFloatStateOf(sharedPreferences.getFloat("gaze_threshold", defaultGazeThreshold))
