@@ -3,6 +3,7 @@ package com.jhoxmanv.watcher.viewmodel
 import android.app.Application
 import android.content.Context
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.core.content.edit
 import androidx.lifecycle.AndroidViewModel
 
@@ -10,17 +11,22 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 
     private val sharedPreferences = application.getSharedPreferences("watcher_settings", Context.MODE_PRIVATE)
 
-    // --- Defaults as requested by the user --- //
+    // --- Defaults --- //
     private val defaultGazeThreshold = 0.2f      // Corresponds to 80% sensitivity (1.0 - 0.8)
     private val defaultYawThreshold = 20f
     private val defaultPitchThreshold = 20f
     private val defaultScreenOffTime = 1f
+    private val defaultPauseMedia = true
+    private val defaultOverlayOpacity = 1f // 100% solid
 
     // --- Live, saved values --- //
     var gazeThreshold = mutableFloatStateOf(sharedPreferences.getFloat("gaze_threshold", defaultGazeThreshold))
     var yawThreshold = mutableFloatStateOf(sharedPreferences.getFloat("yaw_threshold", defaultYawThreshold))
     var pitchThreshold = mutableFloatStateOf(sharedPreferences.getFloat("pitch_threshold", defaultPitchThreshold))
     var screenOffTime = mutableFloatStateOf(sharedPreferences.getFloat("screen_off_time", defaultScreenOffTime))
+    var pauseMedia = mutableStateOf(sharedPreferences.getBoolean("pause_media", defaultPauseMedia))
+    var overlayOpacity = mutableFloatStateOf(sharedPreferences.getFloat("overlay_opacity", defaultOverlayOpacity))
+
 
     // --- Temporary values for the config screen --- //
     var tempGazeThreshold = mutableFloatStateOf(gazeThreshold.floatValue)
@@ -59,9 +65,19 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         tempPitchThreshold.floatValue = pitchThreshold.floatValue
     }
 
-    // --- Function for the main screen slider --- //
+    // --- Functions for main screen settings --- //
     fun onScreenOffTimeChanged(newValue: Float) {
         screenOffTime.floatValue = newValue
         sharedPreferences.edit { putFloat("screen_off_time", newValue) }
+    }
+
+    fun onPauseMediaChanged(newValue: Boolean) {
+        pauseMedia.value = newValue
+        sharedPreferences.edit { putBoolean("pause_media", newValue) }
+    }
+
+    fun onOverlayOpacityChanged(newValue: Float) {
+        overlayOpacity.floatValue = newValue
+        sharedPreferences.edit { putFloat("overlay_opacity", newValue) }
     }
 }

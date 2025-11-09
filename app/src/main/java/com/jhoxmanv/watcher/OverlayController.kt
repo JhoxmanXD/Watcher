@@ -2,6 +2,7 @@ package com.jhoxmanv.watcher
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.graphics.Color
 import android.graphics.PixelFormat
 import android.os.Handler
 import android.os.Looper
@@ -16,6 +17,7 @@ class OverlayController(private val context: Context, private val lifecycle: Lif
 
     private val windowManager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
     private var overlayView: FrameLayout? = null
+    private val sharedPreferences = context.getSharedPreferences("watcher_settings", Context.MODE_PRIVATE)
 
     companion object {
         private const val TAG = "OverlayController"
@@ -24,7 +26,7 @@ class OverlayController(private val context: Context, private val lifecycle: Lif
     fun isOverlayShowing(): Boolean = overlayView != null && overlayView?.isAttachedToWindow == true
 
     @SuppressLint("ClickableViewAccessibility")
-    fun showOverlay() {
+    fun showOverlay(pauseMedia: Boolean) {
         if (isOverlayShowing()) {
             Log.d(TAG, "Overlay is already showing.")
             return
@@ -36,20 +38,32 @@ class OverlayController(private val context: Context, private val lifecycle: Lif
                 return@post
             }
             try {
-                // Modern, simple, and safe WindowManager parameters.
+                // If pauseMedia is true, the window must be focusable to steal audio focus.
+                // If pauseMedia is false, the window must NOT be focusable.
+                val flags = if (pauseMedia) {
+                    0 // Default flags: focusable, modal, blocks touches.
+                } else {
+                    WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
+                }
+
+                // Read opacity from shared preferences, default to 1f (100% solid).
+                val overlayOpacity = sharedPreferences.getFloat("overlay_opacity", 1f)
+                // Calculate color with alpha component.
+                val backgroundColor = Color.argb((255 * overlayOpacity).toInt(), 0, 0, 0)
+
                 val params = WindowManager.LayoutParams(
                     WindowManager.LayoutParams.MATCH_PARENT,
                     WindowManager.LayoutParams.MATCH_PARENT,
                     WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-                    0, // Setting flags to 0 makes the window modal and blocks all touches below it.
+                    flags,
                     PixelFormat.TRANSLUCENT
                 ).apply {
                     gravity = Gravity.TOP or Gravity.START
                 }
 
                 overlayView = FrameLayout(context).apply {
-                    setBackgroundColor(0xFF000000.toInt()) // Black background
-                    // Consume all touch events and satisfy the accessibility lint check by calling performClick.
+                    setBackgroundColor(backgroundColor)
+                    // Always consume touch events to block interaction with the app below.
                     setOnTouchListener { v, event ->
                         if (event.action == MotionEvent.ACTION_DOWN) {
                             v.performClick()
@@ -59,7 +73,7 @@ class OverlayController(private val context: Context, private val lifecycle: Lif
                 }
 
                 windowManager.addView(overlayView, params)
-                Log.d(TAG, "Overlay shown successfully.")
+                Log.d(TAG, "Overlay shown with pauseMedia=$pauseMedia, opacity=$overlayOpacity")
 
             } catch (e: Exception) {
                 Log.e(TAG, "Error showing overlay", e)

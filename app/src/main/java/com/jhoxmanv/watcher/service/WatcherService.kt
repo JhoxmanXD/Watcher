@@ -29,8 +29,10 @@ class WatcherService : Service(), LifecycleOwner {
     private val channelId = "WatcherServiceChannel"
     private lateinit var eyeWatchController: EyeWatchController
     private lateinit var overlayController: OverlayController
+    private lateinit var overlayAudioGrip: OverlayAudioGrip
     private val lifecycleRegistry = LifecycleRegistry(this)
     private lateinit var sharedPreferences: SharedPreferences
+
 
     private val lockHandler = Handler(Looper.getMainLooper())
     private var lockRunnable: Runnable? = null
@@ -47,6 +49,7 @@ class WatcherService : Service(), LifecycleOwner {
         sharedPreferences = getSharedPreferences("watcher_settings", MODE_PRIVATE)
         eyeWatchController = EyeWatchController(this, this)
         overlayController = OverlayController(this, lifecycle)
+        overlayAudioGrip = OverlayAudioGrip(this)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -59,28 +62,24 @@ class WatcherService : Service(), LifecycleOwner {
         createNotificationChannel()
         startForeground(1, createNotification())
 
-        // Load all precise settings
-        val screenOffTime = sharedPreferences.getFloat("screen_off_time", 10f).toLong() * 1000
         val gazeThreshold = sharedPreferences.getFloat("gaze_threshold", 0.4f)
         val yawThreshold = sharedPreferences.getFloat("yaw_threshold", 20f)
         val pitchThreshold = sharedPreferences.getFloat("pitch_threshold", 20f)
-        val minFaceSize = 0.5f // Use the fixed value
+        val minFaceSize = 0.5f
 
-        // Configure and start camera for background analysis
         eyeWatchController.setOnFacesDetectedListener { result ->
-            // Focus only on the largest face, same as the config screen
+            val screenOffTime = sharedPreferences.getFloat("screen_off_time", 10f).toLong() * 1000
+            val pauseMedia = sharedPreferences.getBoolean("pause_media", true)
+
             val largestFace = result.faces.maxByOrNull { it.boundingBox.width() * it.boundingBox.height() }
-            val isLooking = if (largestFace != null) {
-                isUserLooking(largestFace, gazeThreshold, yawThreshold, pitchThreshold)
-            } else {
-                false
-            }
+            val isLooking = largestFace != null && isUserLooking(largestFace, gazeThreshold, yawThreshold, pitchThreshold)
 
             if (isLooking) {
-                overlayController.hideOverlay()
                 cancelScreenLock()
             } else {
-                scheduleScreenLock(screenOffTime)
+                if (!overlayController.isOverlayShowing() && lockRunnable == null) {
+                    scheduleScreenLock(screenOffTime, pauseMedia)
+                }
             }
         }
         eyeWatchController.startCamera(minFaceSize = minFaceSize)
@@ -98,34 +97,51 @@ class WatcherService : Service(), LifecycleOwner {
         return eyesAreOpen && headIsFacingForward
     }
 
-    private fun scheduleScreenLock(delay: Long) {
-        if (lockRunnable == null && !overlayController.isOverlayShowing()) {
-            Log.d(TAG, "Scheduling screen lock in ${delay / 1000} seconds.")
-            lockRunnable = Runnable {
-                overlayController.showOverlay()
-                lockRunnable = null
+    private fun scheduleScreenLock(delay: Long, pauseMedia: Boolean) {
+        Log.d(TAG, "Scheduling screen lock in ${delay / 1000} seconds.")
+        lockRunnable = Runnable {
+            overlayController.showOverlay(pauseMedia)
+            if (pauseMedia) {
+                overlayAudioGrip.acquire()
             }
-            lockHandler.postDelayed(lockRunnable!!, delay)
+            lockRunnable = null
         }
+        lockHandler.postDelayed(lockRunnable!!, delay)
     }
 
     private fun cancelScreenLock() {
         lockRunnable?.let {
-            Log.d(TAG, "Face detected, cancelling screen lock.")
+            Log.d(TAG, "Face detected, cancelling screen lock schedule.")
             lockHandler.removeCallbacks(it)
             lockRunnable = null
         }
+
+        if (overlayController.isOverlayShowing()) {
+            val pauseMedia = sharedPreferences.getBoolean("pause_media", true)
+            if (pauseMedia) {
+                overlayAudioGrip.release()
+            }
+            overlayController.hideOverlay()
+        }
     }
+
 
     override fun onDestroy() {
         super.onDestroy()
         WatcherStateHolder.isServiceRunning.value = false
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY)
+
         cancelScreenLock()
-        overlayController.hideOverlay()
+
+        if (overlayController.isOverlayShowing()) {
+            overlayController.hideOverlay()
+        }
+
         eyeWatchController.stopCamera()
+        overlayAudioGrip.release() // Make sure to release the grip on destroy
         Log.d(TAG, "Service destroyed.")
     }
+
 
     override fun onBind(intent: Intent?): IBinder? = null
 

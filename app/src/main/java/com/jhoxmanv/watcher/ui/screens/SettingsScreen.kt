@@ -9,11 +9,14 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Layers
+import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -35,6 +38,8 @@ fun SettingsScreen(
 ) {
     val context = LocalContext.current
     val screenOffTime by settingsViewModel.screenOffTime
+    val pauseMedia by settingsViewModel.pauseMedia
+    val overlayOpacity by settingsViewModel.overlayOpacity
 
     fun onSettingsChanged() {
         if (WatcherStateHolder.isServiceRunning.value) {
@@ -58,6 +63,24 @@ fun SettingsScreen(
             description = "Adjust sensitivity and see a live preview.",
             modifier = Modifier.clickable(onClick = onNavigateToGazeConfig)
         ) { /* No content here, the whole item is clickable */ }
+
+        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
+
+        // Setting for Pause Media
+        SettingItem(
+            icon = Icons.Default.Pause,
+            title = "Pause Media",
+            description = "Pause media when no face is detected.",
+
+            ) {
+            Switch(
+                checked = pauseMedia,
+                onCheckedChange = {
+                    settingsViewModel.onPauseMediaChanged(it)
+                    onSettingsChanged()
+                }
+            )
+        }
 
         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
 
@@ -90,6 +113,33 @@ fun SettingsScreen(
                         style = MaterialTheme.typography.bodySmall,
                         modifier = Modifier.padding(start = 8.dp, top = 4.dp)
                     )
+                }
+            }
+        }
+
+        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
+
+        // Setting for Overlay Opacity
+        SettingItem(
+            icon = Icons.Default.Layers,
+            title = "Overlay Opacity",
+            description = "Controls the transparency of the black screen.",
+            valueLabel = {
+                Text("${(overlayOpacity * 100).toInt()}%", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            }
+        ) {
+            Box(modifier = Modifier.padding(horizontal = 8.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Slider(
+                        value = overlayOpacity,
+                        onValueChange = { settingsViewModel.onOverlayOpacityChanged(it) },
+                        onValueChangeFinished = { onSettingsChanged() },
+                        valueRange = 0.1f..1f, // 10% to 100%
+                        steps = 9,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Spacer(modifier = Modifier.width(16.dp))
+                    InfoTooltip("Controls how transparent the black screen is. 100% is solid black.")
                 }
             }
         }
